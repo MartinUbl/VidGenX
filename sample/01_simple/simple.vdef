@@ -1,0 +1,24 @@
+Config(version = 1, width = 640, height = 480, fps = 30, defaultbackground = RGB('#336633'))
+
+Proto {
+    Smiley = Composite(smilefill) {
+        Circle(x = 30, y = 30, r = 30, fill = RGB('#FFFF00'), stroke = RGB('#00FF00'), strokewidth = 3)
+        Circle(x = 20, y = 20, r = 5, fill = RGB('#888888'), stroke = RGB('#000000'), strokewidth = 2)
+        Circle(x = 40, y = 20, r = 5, fill = RGB('#888888'), stroke = RGB('#000000'), strokewidth = 2)
+        Rectangle(x = 10, y = 40, width = 40, height = 5, fill = smilefill)
+    }
+}
+
+Constants {
+    angry = RGB('#FF0000')
+}
+
+Scene(index = 0, duration = 10s) {
+    // every object has x, y; all parameters (including the x, y) are passed in params block
+
+    v = Rectangle(x = 10, y = 20, width = 100, height = 200, fill = RGB('#669966'))
+    s = Smiley(x = 20, y = 30, smilefill = angry)
+    
+    Wait(duration = 2s)
+    vv = Rectangle(x = 110, y = 120, width = 100, height = 200, fill = RGB('#996699'), rotate = 10)
+}
