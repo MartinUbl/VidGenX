@@ -87,8 +87,18 @@ void CEntity_Wait::Apply_Parameters(const CParams* params) {
 	Assign_Helper<int>("duration", pars, mWait_Duration);
 }
 
-void CEntity_Wait::Execute(CScene& scene) {
-	scene.Wait((mWait_Duration.Get_Value(mDefault_Value_Store) / 1000) / 30 /* FPS */); // TODO
+NExecution_Result CEntity_Wait::Execute(CScene& scene) {
+
+	if (!mSuspend_Frame.has_value()) {
+		mSuspend_Frame = scene.Get_Current_Frame();
+	}
+
+	auto frameDiff = (scene.Get_Current_Frame() - mSuspend_Frame.value());
+
+	if (frameDiff > (mWait_Duration.Get_Value(mDefault_Value_Store) / 1000) * sConfig.Get_FPS())
+		return NExecution_Result::Pass;
+
+	return NExecution_Result::Suspend;
 }
 
 /**************************************************/
@@ -211,6 +221,10 @@ void CComposite::Apply_Body(CCommand* command) {
 
 			if (sc->Get_Params()) {
 				obj->Apply_Parameters(sc->Get_Params());
+			}
+
+			if (sc->Get_Attributes()) {
+				obj->Apply_Attribute_Block(sc->Get_Attributes());
 			}
 
 			mObjects.push_back(std::move(obj));

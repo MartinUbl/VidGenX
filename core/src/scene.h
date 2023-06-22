@@ -13,6 +13,7 @@ class CScene {
 		size_t mCurrent_Entity = 0;
 		size_t mFrame_Counter = 0;
 		size_t mObject_Counter = 1;
+		size_t mMax_Frame = 0;
 
 		std::vector<std::unique_ptr<CScene_Entity>> mEntities;
 
@@ -28,8 +29,11 @@ class CScene {
 		const std::unique_ptr<CScene_Entity>& Get_Object_By_Name(const std::string& name);
 
 		void Begin();
-		void Next_Frame();
+		void Update_Scene();
+		bool Next_Frame();
 		void Render_Frame(BLContext& context);
 
-		void Wait(size_t frames);
+		size_t Get_Current_Frame() const {
+			return mFrame_Counter;
+		}
 };

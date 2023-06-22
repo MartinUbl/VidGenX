@@ -4,6 +4,8 @@
 #include <list>
 #include <algorithm>
 #include <memory>
+#include <format>
+#include <filesystem>
 #include "parser_entities.h"
 #include "vdlang_lex.h"
 #include "vdlang_parser.h"
@@ -40,37 +42,6 @@ class CAnalyzer_State {
 	private:
 		YY_BUFFER_STATE m_state;
 };
-
-void draw_loop() {
-
-	/*
-	BLImage img(480, 480, BL_FORMAT_PRGB32);
-
-	// Attach a rendering context into `img`.
-	BLContext ctx(img);
-
-	// Clear the image.
-	ctx.setCompOp(BL_COMP_OP_SRC_COPY);
-	ctx.fillAll();
-
-	// Fill some path.
-	BLPath path;
-	path.moveTo(26, 31);
-	path.cubicTo(642, 132, 587, -136, 25, 464);
-	path.cubicTo(882, 404, 144, 267, 27, 31);
-
-	ctx.setCompOp(BL_COMP_OP_SRC_OVER);
-	ctx.setFillStyle(BLRgba32(0xFFFFFFFF));
-	ctx.fillPath(path);
-
-	// Detach the rendering context from `img`.
-	ctx.end();
-
-	// Let's use some built-in codecs provided by Blend2D.
-	img.writeToFile("C:\\Data\\Dev\\REPO\\VidGenX\\testout\\bl_sample_1.png");
-	*/
-
-}
 
 int main(int argc, char** argv)
 {
@@ -140,24 +111,39 @@ int main(int argc, char** argv)
 		}
 	}
 
+	std::filesystem::path baseOutDir = "C:\\Data\\Dev\\REPO\\VidGenX\\testout\\";
+	std::filesystem::path ffmpegPath = "C:\\Data\\Dev\\REPO\\_dep\\ffmpeg\\bin\\ffmpeg.exe";
 
+	size_t frameStart = 0;
+
+	for (size_t scIdx = 0; scIdx < scenes.size(); scIdx++)
 	{
-		BLImage img(static_cast<int>(sConfig.Get_Width()), static_cast<int>(sConfig.Get_Height()), BL_FORMAT_PRGB32);
+		scenes[scIdx]->Begin();
+		do {
 
-		BLContext ctx(img);
+			std::cout << "Scene " << scIdx <<" frame " << scenes[scIdx]->Get_Current_Frame() << std::endl;
 
-		ctx.setCompOp(BL_COMP_OP_SRC_COPY);
-		ctx.fillAll();
+			BLImage img(static_cast<int>(sConfig.Get_Width()), static_cast<int>(sConfig.Get_Height()), BL_FORMAT_PRGB32);
+			BLContext ctx(img);
 
-		scenes[0]->Begin();
-		scenes[0]->Render_Frame(ctx);
+			ctx.setCompOp(BL_COMP_OP_SRC_COPY);
+			ctx.fillAll();
 
-		ctx.end();
+			scenes[scIdx]->Render_Frame(ctx);
 
-		img.writeToFile("C:\\Data\\Dev\\REPO\\VidGenX\\testout\\bl_sample_1.png");
+			ctx.end();
+
+			std::string filename = std::format("frame_{:06}.png", (frameStart + scenes[scIdx]->Get_Current_Frame()));
+
+			img.writeToFile((baseOutDir / filename).string().c_str());
+		} while (scenes[scIdx]->Next_Frame());
+
+		frameStart += scenes[scIdx]->Get_Current_Frame();
 	}
 
-	draw_loop();
+	std::string command = ffmpegPath.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + baseOutDir.string() + "\\frame_%06d.png\" -y -vb 20M -b:v 5000k -vcodec mpeg4 -pix_fmt yuv420p " + baseOutDir.string() + "\\out.avi";
+
+	std::system(command.c_str());
 
 	return 0;
 }

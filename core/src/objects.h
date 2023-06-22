@@ -38,6 +38,11 @@ enum class NObject_Type {
 // convenience macro
 constexpr size_t Object_Type_Count = static_cast<size_t>(NObject_Type::count);
 
+enum class NExecution_Result {
+	Pass,			// act like nothing synchronization-relevant happened
+	Suspend,		// suspend the command processing, until this command returns Pass
+};
+
 class CAnimation {
 	public:
 		// TODO
@@ -212,12 +217,15 @@ class CScene_Entity {
 		virtual std::unique_ptr<CScene_Entity> Clone() const { return nullptr; }
 		virtual void Apply_Body(CCommand* command) { }
 		virtual void Apply_Parameters(const CParams* params) = 0;
-		virtual void Execute(CScene& scene) = 0;
+		virtual NExecution_Result Execute(CScene& scene) = 0;
 };
 
 class CEntity_Wait : public CScene_Entity {
 	private:
 		CParam_Wrapper<int> mWait_Duration = 0;
+
+	protected:
+		std::optional<size_t> mSuspend_Frame;
 
 	public:
 		CEntity_Wait() : CScene_Entity(NEntity_Type::Wait) {}
@@ -228,7 +236,7 @@ class CEntity_Wait : public CScene_Entity {
 		}
 
 		void Apply_Parameters(const CParams* params) override;
-		void Execute(CScene& scene) override;
+		NExecution_Result Execute(CScene& scene) override;
 };
 
 class CScene_Object : public CScene_Entity {
@@ -253,7 +261,7 @@ class CScene_Object : public CScene_Entity {
 		double Get_Rotate() const;
 		double Get_Scale() const;
 
-		void Execute(CScene& scene) override { }
+		NExecution_Result Execute(CScene& scene) override { return NExecution_Result::Pass; }
 
 		virtual void Apply_Parameters(const CParams* params) override;
 		virtual std::unique_ptr<CAnimation> Animate(CParams* targetValues);

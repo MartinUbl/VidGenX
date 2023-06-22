@@ -19,9 +19,9 @@ std::unique_ptr<CScene> CScene::Build_From(CBlock* block) {
 		if (sc->Get_Params()) {
 			obj->Apply_Parameters(sc->Get_Params());
 		}
-		//sc->Get_Attributes()
-
-		std::cout << "Name = " << name << std::endl;
+		if (sc->Get_Attributes()) {
+			obj->Apply_Attribute_Block(sc->Get_Attributes());
+		}
 
 		std::string objId = sc->Get_Identifier();
 		if (objId.empty()) {
@@ -30,6 +30,16 @@ std::unique_ptr<CScene> CScene::Build_From(CBlock* block) {
 
 		ret->mEntities.push_back(std::move(obj));
 		ret->mScene_Objects[objId] = ret->mEntities.size() - 1;
+	}
+
+	auto* pars = block->Get_Parameters();
+	if (pars) {
+		auto& mp = pars->Get_Parameters();
+
+		auto itr = mp.find("duration");
+		if (itr != mp.end()) {
+			ret->mMax_Frame = (std::get<int>(itr->second.value) / 1000) * sConfig.Get_FPS();
+		}
 	}
 
 	return ret;
@@ -47,30 +57,41 @@ const std::unique_ptr<CScene_Entity>& CScene::Get_Object_By_Name(const std::stri
 
 void CScene::Begin() {
 	mCurrent_Entity = 0;
+	Update_Scene();
+}
 
-	for (size_t i = 0; i < mEntities.size(); i++) {
-		if (mEntities[i]->Get_Type() == NEntity_Type::Object) {
-			mWorking_Entites.push_back(i);
+void CScene::Update_Scene() {
+	for (; mCurrent_Entity < mEntities.size(); mCurrent_Entity++) {
+
+		if (mEntities[mCurrent_Entity]->Execute(*this) == NExecution_Result::Suspend) {
+			break;
+		}
+
+		if (mEntities[mCurrent_Entity]->Get_Type() == NEntity_Type::Object) {
+			mWorking_Entites.push_back(mCurrent_Entity);
 		}
 	}
 }
 
-void CScene::Next_Frame() {
+bool CScene::Next_Frame() {
 	mFrame_Counter++;
+
+	if (mFrame_Counter >= mMax_Frame) {
+		return false;
+	}
+
+	Update_Scene();
+
+	return true;
 }
 
 void CScene::Render_Frame(BLContext& context) {
 
-	
-
 	for (size_t idx : mWorking_Entites) {
-		dynamic_cast<CScene_Object*>(mEntities[idx].get())->Render(context, CTransform::Identity());
+		auto* obj = dynamic_cast<CScene_Object*>(mEntities[idx].get());
+		if (obj) {
+			obj->Render(context, CTransform::Identity());
+		}
 	}
 
-	
-
-}
-
-void CScene::Wait(size_t frames) {
-	//
 }

@@ -3,6 +3,7 @@
 %top {
     //#define DEBUG_PRINT(x) printf("SCANNER: " x "\n")
     #define DEBUG_PRINT(x)
+    #include <iostream>
 
     #include <string>
     #include "vdlang_parser.h"
@@ -37,17 +38,17 @@ TIMESPEC [-]{0,1}[0-9]+(s|m|ms){1}
 {TIMESPEC} {
     DEBUG_PRINT("timespec (float)");
 
-    yylval.floatval = atof(yytext);
+    yylval.intval = atof(yytext);
 
     std::string tmp(yytext);
     if (tmp.ends_with("ms")) {
         // no need to convert
     }
     else if (tmp.ends_with("s")) {
-        yylval.floatval *= 1000;
+        yylval.intval *= 1000;
     }
     else if (tmp.ends_with("m")) {
-        yylval.floatval *= 60*1000;
+        yylval.intval *= 60*1000;
     }
 
     return TIMESPEC;

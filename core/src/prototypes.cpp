@@ -34,8 +34,6 @@ bool CPrototypes::Build(CBlock* block) {
 			obj->Apply_Attribute_Block(sc->Get_Attributes());
 		}
 
-		std::cout << "Name = " << name << std::endl;
-
 		sFactory.Register_Prototype(namecopy, std::move(obj));
 	}
 
