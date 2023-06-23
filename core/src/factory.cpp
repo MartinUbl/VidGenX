@@ -8,6 +8,7 @@ CFactory::CFactory() {
 	Register_Factory<CCircle>("circle");
 	Register_Factory<CComposite>("composite");
 	Register_Factory<CEntity_Wait>("wait");
+	Register_Factory<CEntity_Animate>("animate");
 }
 
 std::unique_ptr<CScene_Entity> CFactory::Create(const std::string& name) {

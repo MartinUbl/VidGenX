@@ -90,6 +90,7 @@ class CCommand {
 	private:
 		std::string mIdentifier;
 		std::string mEntity_Name;
+		std::string mObject_Reference;
 		CParams* mParams = nullptr;
 		CAttributes* mAttributes = nullptr;
 		std::optional<TValue_Spec> mValue;
@@ -115,6 +116,14 @@ class CCommand {
 
 		const std::string& Get_Identifier() const {
 			return mIdentifier;
+		}
+
+		void Set_Object_Reference(const std::string& objRef) {
+			mObject_Reference = objRef;
+		}
+
+		const std::string& Get_Object_Reference() const {
+			return mObject_Reference;
 		}
 
 		void Set_Entity_Name(const std::string& entityName) {

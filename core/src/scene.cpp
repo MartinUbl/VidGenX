@@ -16,11 +16,21 @@ std::unique_ptr<CScene> CScene::Build_From(CBlock* block) {
 		auto name = sc->Get_Entity_Name();
 
 		auto obj = sFactory.Create(name);
+
+		if (!obj) {
+			std::cerr << "Cannot instantiate an object with name " << name << std::endl;
+			return nullptr;
+		}
+
 		if (sc->Get_Params()) {
 			obj->Apply_Parameters(sc->Get_Params());
 		}
 		if (sc->Get_Attributes()) {
 			obj->Apply_Attribute_Block(sc->Get_Attributes());
+		}
+
+		if (!sc->Get_Object_Reference().empty()) {
+			obj->Set_Object_Reference(sc->Get_Object_Reference());
 		}
 
 		std::string objId = sc->Get_Identifier();
@@ -61,13 +71,14 @@ void CScene::Begin() {
 }
 
 void CScene::Update_Scene() {
+
 	for (; mCurrent_Entity < mEntities.size(); mCurrent_Entity++) {
 
 		if (mEntities[mCurrent_Entity]->Execute(*this) == NExecution_Result::Suspend) {
 			break;
 		}
 
-		if (mEntities[mCurrent_Entity]->Get_Type() == NEntity_Type::Object) {
+		if (mEntities[mCurrent_Entity]->Get_Type() == NEntity_Type::Object || mEntities[mCurrent_Entity]->Get_Type() == NEntity_Type::Animate) {
 			mWorking_Entites.push_back(mCurrent_Entity);
 		}
 	}
@@ -88,6 +99,9 @@ bool CScene::Next_Frame() {
 void CScene::Render_Frame(BLContext& context) {
 
 	for (size_t idx : mWorking_Entites) {
+
+		mEntities[idx]->Execute(*this);
+
 		auto* obj = dynamic_cast<CScene_Object*>(mEntities[idx].get());
 		if (obj) {
 			obj->Render(context, CTransform::Identity());

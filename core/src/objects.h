@@ -15,6 +15,7 @@ enum class NEntity_Type {
 
 	Object,
 	Wait,
+	Animate,
 
 	count
 };
@@ -41,11 +42,6 @@ constexpr size_t Object_Type_Count = static_cast<size_t>(NObject_Type::count);
 enum class NExecution_Result {
 	Pass,			// act like nothing synchronization-relevant happened
 	Suspend,		// suspend the command processing, until this command returns Pass
-};
-
-class CAnimation {
-	public:
-		// TODO
 };
 
 class CTransform {
@@ -147,8 +143,14 @@ class CValue_Store {
 		}
 };
 
+class CGeneric_Param_Wrapper {
+	public:
+		virtual TValue_Spec Get_Value() const = 0;
+		virtual void Set_Value(const TValue_Spec& src) = 0;
+};
+
 template<typename T>
-class CParam_Wrapper {
+class CParam_Wrapper : public CGeneric_Param_Wrapper {
 	private:
 		mutable std::optional<T> mValue;
 		std::optional<std::string> mAttribute_Name;
@@ -164,6 +166,17 @@ class CParam_Wrapper {
 
 		void Set_Resolve_Key(const std::string& key) {
 			mAttribute_Name = key;
+		}
+
+		TValue_Spec Get_Value() const override {
+			return TValue_Spec{ NValue_Type::Identifier, mValue.value() };
+		}
+
+		void Set_Value(const TValue_Spec& src) override {
+			std::visit([this](auto&& val) {
+				if constexpr (std::is_same_v<std::remove_cvref_t<decltype(val)>, T>)
+					mValue = val;
+			}, src.value);
 		}
 
 		template<typename TStore>
@@ -183,13 +196,33 @@ class CParam_Wrapper {
 		}
 };
 
+class CEntity_Animate;
+
 class CScene_Entity {
+	friend class CEntity_Animate;
+
 	private:
 		NEntity_Type mType;
 
 	protected:
 		CValue_Store mDefault_Value_Store;
 		std::set<std::string> mResolvable_Attributes;
+		std::optional<std::string> mObject_Reference;
+		std::map<std::string, CGeneric_Param_Wrapper*> mParam_Reference;
+
+		template<typename T, typename TTarget>
+		void Assign_Helper(const std::string& key, const std::map<std::string, TValue_Spec>& paramMap, TTarget& target) {
+			auto itr = paramMap.find(key);
+			if (itr != paramMap.end()) {
+				mParam_Reference[key] = &target;
+				if (itr->second.type == NValue_Type::Identifier) {
+					target.Set_Resolve_Key(std::get<std::string>(itr->second.value));
+				}
+				else {
+					target = std::get<T>(itr->second.value);
+				}
+			}
+		}
 
 	public:
 		explicit CScene_Entity(NEntity_Type type) : mType(type) {}
@@ -214,6 +247,17 @@ class CScene_Entity {
 			return mDefault_Value_Store;
 		}
 
+		void Set_Object_Reference(const std::string& objRef) {
+			mObject_Reference = objRef;
+		}
+
+		CGeneric_Param_Wrapper* Get_Param_Ref(const std::string& refName) {
+			auto itr = mParam_Reference.find(refName);
+			if (itr == mParam_Reference.end())
+				return nullptr;
+			return itr->second;
+		}
+
 		virtual std::unique_ptr<CScene_Entity> Clone() const { return nullptr; }
 		virtual void Apply_Body(CCommand* command) { }
 		virtual void Apply_Parameters(const CParams* params) = 0;
@@ -232,6 +276,33 @@ class CEntity_Wait : public CScene_Entity {
 
 		std::unique_ptr<CScene_Entity> Clone() const override {
 			auto ptr = std::make_unique<CEntity_Wait>(*this);
+			return ptr;
+		}
+
+		void Apply_Parameters(const CParams* params) override;
+		NExecution_Result Execute(CScene& scene) override;
+};
+
+class CEntity_Animate : public CScene_Entity {
+	private:
+		CParam_Wrapper<int> mDuration = 0;
+
+		struct TAnimate_Param {
+			std::string paramName;
+			std::optional<TValue_Spec> initial;
+			TValue_Spec target;
+		};
+
+		std::vector<TAnimate_Param> mAnimation_Params;
+
+	protected:
+		std::optional<size_t> mStart_Frame;
+
+	public:
+		CEntity_Animate() : CScene_Entity(NEntity_Type::Animate) {}
+
+		std::unique_ptr<CScene_Entity> Clone() const override {
+			auto ptr = std::make_unique<CEntity_Animate>(*this);
 			return ptr;
 		}
 
@@ -264,7 +335,6 @@ class CScene_Object : public CScene_Entity {
 		NExecution_Result Execute(CScene& scene) override { return NExecution_Result::Pass; }
 
 		virtual void Apply_Parameters(const CParams* params) override;
-		virtual std::unique_ptr<CAnimation> Animate(CParams* targetValues);
 		virtual bool Render(BLContext& context, const CTransform& transform) const = 0;
 };
 
@@ -291,7 +361,6 @@ class CRectangle : public CBasic_Clonable_Scene_Object<CRectangle> {
 		CRectangle() : CBasic_Clonable_Scene_Object(NObject_Type::Rectangle) {}
 
 		void Apply_Parameters(const CParams* params) override;
-		std::unique_ptr<CAnimation> Animate(CParams* targetValues) override;
 		bool Render(BLContext& context, const CTransform& transform) const override;
 };
 
@@ -306,7 +375,6 @@ class CCircle : public CBasic_Clonable_Scene_Object<CCircle> {
 		CCircle() : CBasic_Clonable_Scene_Object(NObject_Type::Circle) {}
 
 		void Apply_Parameters(const CParams* params) override;
-		std::unique_ptr<CAnimation> Animate(CParams* targetValues) override;
 		bool Render(BLContext& context, const CTransform& transform) const override;
 };
 
@@ -324,6 +392,5 @@ class CComposite : public CBasic_Clonable_Scene_Object<CComposite> {
 
 		void Apply_Body(CCommand* command) override;
 		void Apply_Parameters(const CParams* params) override;
-		std::unique_ptr<CAnimation> Animate(CParams* targetValues) override;
 		bool Render(BLContext& context, const CTransform& transform) const override;
 };

@@ -31,6 +31,7 @@ TIMESPEC [-]{0,1}[0-9]+(s|m|ms){1}
 "="             { DEBUG_PRINT("equals"); return EQUALS; }
 "->"            { DEBUG_PRINT("larrow"); return L_ARROW; }
 "-"             { DEBUG_PRINT("dash"); return DASH; }
+"."             { DEBUG_PRINT("dot"); return DOT; }
 "RGB"           { DEBUG_PRINT("rgbspec"); return RGBSPEC; }
 [ \t\r\n]       ;
 "//".*          /* ignore comments */
@@ -38,7 +39,7 @@ TIMESPEC [-]{0,1}[0-9]+(s|m|ms){1}
 {TIMESPEC} {
     DEBUG_PRINT("timespec (float)");
 
-    yylval.intval = atof(yytext);
+    yylval.intval = atoi(yytext);
 
     std::string tmp(yytext);
     if (tmp.ends_with("ms")) {

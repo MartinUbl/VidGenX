@@ -61,7 +61,7 @@
 %define parse.error verbose
 %verbose
 
-%token IDENT_CONFIG IDENT_PROTO IDENT_CONSTANTS IDENT_SCENE L_BRACKET R_BRACKET SEMICOLON L_ARROW COMMA L_PAREN R_PAREN DASH EQUALS COLON
+%token IDENT_CONFIG IDENT_PROTO IDENT_CONSTANTS IDENT_SCENE L_BRACKET R_BRACKET SEMICOLON L_ARROW COMMA L_PAREN R_PAREN DASH EQUALS COLON DOT
 %token<floatval> INT_NUMBER FLOAT_NUMBER
 %token<intval> RGBSPEC TIMESPEC
 %token<strval> STRVALUE IDENTIFIER
@@ -237,5 +237,11 @@ command
         $$->Set_Entity_Name($3);
         $$->Set_Attributes($5);
         $$->Add_Command($8);
+    }
+    | IDENTIFIER DOT IDENTIFIER L_PAREN params_block R_PAREN {
+        $$ = new CCommand();
+        $$->Set_Object_Reference($1);
+        $$->Set_Entity_Name($3);
+        $$->Set_Params($5);
     }
 ;

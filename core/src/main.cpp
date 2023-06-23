@@ -57,6 +57,7 @@ int main(int argc, char** argv)
 	}
 	catch (std::exception& ex) {
 		std::cerr << "Cannot parse: " << ex.what() << std::endl;
+		return 4;
 	}
 
 	std::vector<std::unique_ptr<CScene>> scenes;
@@ -141,7 +142,7 @@ int main(int argc, char** argv)
 		frameStart += scenes[scIdx]->Get_Current_Frame();
 	}
 
-	std::string command = ffmpegPath.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + baseOutDir.string() + "\\frame_%06d.png\" -y -vb 20M -b:v 5000k -vcodec mpeg4 -pix_fmt yuv420p " + baseOutDir.string() + "\\out.avi";
+	std::string command = ffmpegPath.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + baseOutDir.string() + "\\frame_%06d.png\" -y -c:v copy -pix_fmt yuv420p " + baseOutDir.string() + "\\out.avi";
 
 	std::system(command.c_str());
 

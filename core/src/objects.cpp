@@ -4,20 +4,7 @@
 #include "consts.h"
 #include <functional>
 #include <numbers>
-
-template<typename T, typename TTarget>
-void Assign_Helper(const std::string& key, const std::map<std::string, TValue_Spec>& paramMap, TTarget& target) {
-	auto itr = paramMap.find(key);
-	if (itr != paramMap.end()) {
-		if (itr->second.type == NValue_Type::Identifier) {
-			//target = std::get<T>(sConsts.Get_Constant(std::get<std::string>(itr->second.value)).value);
-			target.Set_Resolve_Key(std::get<std::string>(itr->second.value));
-		}
-		else {
-			target = std::get<T>(itr->second.value);
-		}
-	}
-}
+#include <iostream>
 
 CScene_Object::CScene_Object(NObject_Type type) : CScene_Entity(NEntity_Type::Object), mObject_Type(type) {
 	//
@@ -73,12 +60,6 @@ void CScene_Object::Apply_Parameters(const CParams* params) {
 	Assign_Helper<double>("scale", pars, mScale);
 }
 
-std::unique_ptr<CAnimation> CScene_Object::Animate(CParams* targetValues) {
-	// TODO
-
-	return nullptr;
-}
-
 /**************************************************/
 
 void CEntity_Wait::Apply_Parameters(const CParams* params) {
@@ -115,10 +96,6 @@ void CRectangle::Apply_Parameters(const CParams* params) {
 	Assign_Helper<int>("strokewidth", pars, mStroke_Width);
 }
 
-std::unique_ptr<CAnimation> CRectangle::Animate(CParams* targetValues) {
-	return nullptr; // TODO
-}
-
 bool CRectangle::Render(BLContext& context, const CTransform& transform) const {
 
 	CTransform_Guard _(transform, context);
@@ -152,10 +129,6 @@ void CCircle::Apply_Parameters(const CParams* params) {
 	Assign_Helper<rgb_t>("fill", pars, mFill_Color);
 	Assign_Helper<rgb_t>("stroke", pars, mStroke_Color);
 	Assign_Helper<double>("strokewidth", pars, mStroke_Width);
-}
-
-std::unique_ptr<CAnimation> CCircle::Animate(CParams* targetValues) {
-	return nullptr; // TODO
 }
 
 bool CCircle::Render(BLContext& context, const CTransform& transform) const {
@@ -227,14 +200,14 @@ void CComposite::Apply_Body(CCommand* command) {
 				obj->Apply_Attribute_Block(sc->Get_Attributes());
 			}
 
+			if (!sc->Get_Object_Reference().empty()) {
+				obj->Set_Object_Reference(sc->Get_Object_Reference());
+			}
+
 			mObjects.push_back(std::move(obj));
 		}
 	}
 
-}
-
-std::unique_ptr<CAnimation> CComposite::Animate(CParams* targetValues) {
-	return nullptr; // TODO
 }
 
 bool CComposite::Render(BLContext& context, const CTransform& transform) const {
@@ -254,4 +227,79 @@ bool CComposite::Render(BLContext& context, const CTransform& transform) const {
 	}
 
 	return true;
+}
+
+/**************************************************/
+
+void CEntity_Animate::Apply_Parameters(const CParams* params) {
+	auto pars = params->Get_Parameters();
+
+	Assign_Helper<int>("duration", pars, mDuration);
+
+	for (auto& p : pars) {
+		if (p.first == "duration")
+			continue;
+
+		mAnimation_Params.push_back({
+			p.first,
+			std::nullopt,
+			p.second
+		});
+	}
+}
+
+template<typename T>
+T Animate_Linear(T source, T target, double progress) {
+	if constexpr (std::is_integral_v<std::remove_cvref_t<T>> || std::is_floating_point_v<std::remove_cvref_t<T>>) {
+		return static_cast<T>(static_cast<const double>(source) + static_cast<const double>(target - source) * progress);
+	}
+
+	return source;
+}
+
+NExecution_Result CEntity_Animate::Execute(CScene& scene) {
+
+	auto& obj = scene.Get_Object_By_Name(mObject_Reference.value());
+	if (obj) {
+		for (auto& ap : mAnimation_Params) {
+			auto* ref = obj->Get_Param_Ref(ap.paramName);
+			if (!ref) {
+				continue;
+			}
+
+			if (!ap.initial.has_value()) {
+				ap.initial = ref->Get_Value();
+				mStart_Frame = scene.Get_Current_Frame();
+			}
+
+			auto frameDiff = (scene.Get_Current_Frame() - mStart_Frame.value());
+
+			auto numFrames = (mDuration.Get_Value(mDefault_Value_Store) / 1000) * sConfig.Get_FPS();
+
+			double progress = 0;
+			if (numFrames < frameDiff)
+				progress = 1;
+			else if (frameDiff < 0)
+				progress = 0;
+			else
+				progress = static_cast<double>(frameDiff) / static_cast<double>(numFrames);
+
+			std::visit([this, ap, ref, progress](auto&& sval) {
+				std::visit([this, ap, ref, sval, progress](auto&& tval) {
+
+					if constexpr (std::is_same_v<std::remove_cvref_t<decltype(sval)>, std::remove_cvref_t<decltype(tval)>>) {
+
+						using TVal = std::remove_cvref_t<decltype(sval)>;
+
+						auto res = Animate_Linear(sval, tval, progress);
+
+						ref->Set_Value(TValue_Spec{ ap.initial.value().type, res });
+					}
+
+				}, ap.target.value);
+			}, ap.initial.value().value);
+		}
+	}
+
+	return NExecution_Result::Pass;
 }

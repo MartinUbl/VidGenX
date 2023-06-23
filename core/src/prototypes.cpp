@@ -34,6 +34,10 @@ bool CPrototypes::Build(CBlock* block) {
 			obj->Apply_Attribute_Block(sc->Get_Attributes());
 		}
 
+		if (!sc->Get_Object_Reference().empty()) {
+			obj->Set_Object_Reference(sc->Get_Object_Reference());
+		}
+
 		sFactory.Register_Prototype(namecopy, std::move(obj));
 	}
 

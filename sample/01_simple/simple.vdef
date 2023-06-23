@@ -21,4 +21,6 @@ Scene(index = 0, duration = 4s) {
     
     Wait(duration = 2s)
     vv = Rectangle(x = 110, y = 120, width = 100, height = 200, fill = RGB('#996699'), rotate = 10)
+    
+    vv.Animate(rotate = 60, duration = 1s, width = 300)
 }
