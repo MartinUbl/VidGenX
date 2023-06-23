@@ -2,6 +2,7 @@
 #include "factory.h"
 
 #include <iostream>
+#include <spdlog/spdlog.h>
 
 CPrototypes::CPrototypes() {
 	//
@@ -13,12 +14,12 @@ bool CPrototypes::Build(CBlock* block) {
 		auto name = sc->Get_Entity_Name();
 
 		if (sc->Get_Identifier().empty()) {
-			std::cerr << "Prototype must have an identifier" << std::endl;
+			spdlog::error("Prototype must have an identifier");
 			return false;
 		}
 
 		std::string namecopy(sc->Get_Identifier());
-		std::transform(namecopy.begin(), namecopy.end(), namecopy.begin(), std::tolower);
+		std::transform(namecopy.begin(), namecopy.end(), namecopy.begin(), [](char c) { return std::tolower(c); });
 
 		auto obj = sFactory.Create(name);
 

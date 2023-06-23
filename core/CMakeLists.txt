@@ -23,6 +23,7 @@ ADD_FLEX_BISON_DEPENDENCY(LEXER PARSER)
 FILE(GLOB_RECURSE src src/*.cpp src/*.hpp src/*.h src/*.c src/*.l src/*.y)
 
 INCLUDE_DIRECTORIES(src)
+INCLUDE_DIRECTORIES("${APP_DIR}/../third_party/spdlog/include/")
 
 ADD_EXECUTABLE(VidGenX ${src} "${SRC_DIR}/vdlang.y" "${LEXER_OUT}" "${PARSER_OUT}")
 

@@ -1,5 +1,7 @@
 #include "config.h"
 
+#include <spdlog/spdlog.h>
+
 CConfig::CConfig() {
 	//
 }
@@ -7,6 +9,7 @@ CConfig::CConfig() {
 bool CConfig::Build(CBlock* configBlock) {
 	auto* params = configBlock->Get_Parameters();
 	if (!params) {
+		spdlog::error("No parameters found for given config block");
 		return false;
 	}
 
@@ -25,6 +28,19 @@ bool CConfig::Build(CBlock* configBlock) {
 	mDefault_Background = getParam("defaultbackground", (rgb_t)mDefault_Background);
 
 	mInitialized = true;
+
+	if (mWidth == 0) {
+		spdlog::error("Config width cannot be null");
+		return false;
+	}
+	if (mHeight == 0) {
+		spdlog::error("Config height cannot be null");
+		return false;
+	}
+	if (mFPS == 0) {
+		spdlog::error("Config framerate (FPS) cannot be null");
+		return false;
+	}
 
 	return true;
 }

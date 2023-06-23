@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <string>
 
+#include <spdlog/spdlog.h>
+
 CConsts::CConsts() {
 	//
 }
@@ -13,19 +15,19 @@ bool CConsts::Build(CBlock* block) {
 
 	for (auto& sc : subc) {
 		if (sc->Get_Identifier().empty()) {
-			std::cerr << "Constants must have name!" << std::endl;
+			spdlog::error("Constants must have a name!");
 			return false;
 		}
 		
 		std::string namecopy(sc->Get_Identifier());
-		std::transform(namecopy.begin(), namecopy.end(), namecopy.begin(), std::tolower);
+		std::transform(namecopy.begin(), namecopy.end(), namecopy.begin(), [](char c) { return std::tolower(c); });
 		
 		if (mConsts.find(namecopy) != mConsts.end()) {
-			std::cerr << "Multiple definition of constant '" << sc->Get_Identifier() << "'" << std::endl;
+			spdlog::error("Multiple definition of constant '{}'!", sc->Get_Identifier());
 			return false;
 		}
 		else if (!sc->Get_Value().has_value()) {
-			std::cerr << "Constant '" << sc->Get_Identifier() << "' does not have a valid value" << std::endl;
+			spdlog::error("Constant '{}' does not have a valid value", sc->Get_Identifier());
 			return false;
 		}
 

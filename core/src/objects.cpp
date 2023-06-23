@@ -6,6 +6,8 @@
 #include <numbers>
 #include <iostream>
 
+#include <spdlog/spdlog.h>
+
 CScene_Object::CScene_Object(NObject_Type type) : CScene_Entity(NEntity_Type::Object), mObject_Type(type) {
 	//
 }
@@ -54,10 +56,15 @@ void CScene_Object::Set_Position(double x, double y) {
 void CScene_Object::Apply_Parameters(const CParams* params) {
 	auto pars = params->Get_Parameters();
 
-	Assign_Helper<double>("x", pars, mX);
-	Assign_Helper<double>("y", pars, mY);
-	Assign_Helper<double>("rotate", pars, mRotate);
-	Assign_Helper<double>("scale", pars, mScale);
+	try {
+		Assign_Helper<double>("x", pars, mX);
+		Assign_Helper<double>("y", pars, mY);
+		Assign_Helper<double>("rotate", pars, mRotate);
+		Assign_Helper<double>("scale", pars, mScale);
+	}
+	catch (CInvalid_Parameter_Type& ex) {
+		spdlog::error("The parameter {} has a different type, than expected", ex.Get_Param_Name());
+	}
 }
 
 /**************************************************/
@@ -65,7 +72,12 @@ void CScene_Object::Apply_Parameters(const CParams* params) {
 void CEntity_Wait::Apply_Parameters(const CParams* params) {
 	auto pars = params->Get_Parameters();
 
-	Assign_Helper<int>("duration", pars, mWait_Duration);
+	try {
+		Assign_Helper<int>("duration", pars, mWait_Duration);
+	}
+	catch (CInvalid_Parameter_Type& ex) {
+		spdlog::error("The parameter {} has a different type, than expected", ex.Get_Param_Name());
+	}
 }
 
 NExecution_Result CEntity_Wait::Execute(CScene& scene) {
@@ -89,11 +101,16 @@ void CRectangle::Apply_Parameters(const CParams* params) {
 
 	auto pars = params->Get_Parameters();
 
-	Assign_Helper<double>("width", pars, mWidth);
-	Assign_Helper<double>("height", pars, mHeight);
-	Assign_Helper<rgb_t>("fill", pars, mFill_Color);
-	Assign_Helper<rgb_t>("stroke", pars, mStroke_Color);
-	Assign_Helper<int>("strokewidth", pars, mStroke_Width);
+	try {
+		Assign_Helper<double>("width", pars, mWidth);
+		Assign_Helper<double>("height", pars, mHeight);
+		Assign_Helper<rgb_t>("fill", pars, mFill_Color);
+		Assign_Helper<rgb_t>("stroke", pars, mStroke_Color);
+		Assign_Helper<int>("strokewidth", pars, mStroke_Width);
+	}
+	catch (CInvalid_Parameter_Type& ex) {
+		spdlog::error("The parameter {} has a different type, than expected", ex.Get_Param_Name());
+	}
 }
 
 bool CRectangle::Render(BLContext& context, const CTransform& transform) const {
@@ -125,10 +142,15 @@ void CCircle::Apply_Parameters(const CParams* params) {
 
 	auto pars = params->Get_Parameters();
 
-	Assign_Helper<double>("r", pars, mRadius);
-	Assign_Helper<rgb_t>("fill", pars, mFill_Color);
-	Assign_Helper<rgb_t>("stroke", pars, mStroke_Color);
-	Assign_Helper<double>("strokewidth", pars, mStroke_Width);
+	try {
+		Assign_Helper<double>("r", pars, mRadius);
+		Assign_Helper<rgb_t>("fill", pars, mFill_Color);
+		Assign_Helper<rgb_t>("stroke", pars, mStroke_Color);
+		Assign_Helper<double>("strokewidth", pars, mStroke_Width);
+	}
+	catch (CInvalid_Parameter_Type& ex) {
+		spdlog::error("The parameter {} has a different type, than expected", ex.Get_Param_Name());
+	}
 }
 
 bool CCircle::Render(BLContext& context, const CTransform& transform) const {
@@ -181,7 +203,7 @@ void CComposite::Apply_Body(CCommand* command) {
 		for (auto sc : sct->Get_Subcommands()) {
 
 			std::string namecopy(sc->Get_Entity_Name());
-			std::transform(namecopy.begin(), namecopy.end(), namecopy.begin(), std::tolower);
+			std::transform(namecopy.begin(), namecopy.end(), namecopy.begin(), [](char c) { return std::tolower(c); });
 
 			auto obj = sFactory.Create(namecopy);
 
@@ -234,7 +256,12 @@ bool CComposite::Render(BLContext& context, const CTransform& transform) const {
 void CEntity_Animate::Apply_Parameters(const CParams* params) {
 	auto pars = params->Get_Parameters();
 
-	Assign_Helper<int>("duration", pars, mDuration);
+	try {
+		Assign_Helper<int>("duration", pars, mDuration);
+	}
+	catch (CInvalid_Parameter_Type& ex) {
+		spdlog::error("The parameter {} has a different type, than expected", ex.Get_Param_Name());
+	}
 
 	for (auto& p : pars) {
 		if (p.first == "duration")

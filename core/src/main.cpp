@@ -16,6 +16,7 @@
 #include "scene.h"
 
 #include <blend2d.h>
+#include <spdlog/spdlog.h>
 
 extern std::vector<CBlock*> _Blocks;
 
@@ -45,6 +46,8 @@ class CAnalyzer_State {
 
 int main(int argc, char** argv)
 {
+	spdlog::info("Parsing the input file");
+
 	try {
 		std::ifstream ifs(argv[1]);
 
@@ -56,7 +59,7 @@ int main(int argc, char** argv)
 		state.Parse();
 	}
 	catch (std::exception& ex) {
-		std::cerr << "Cannot parse: " << ex.what() << std::endl;
+		spdlog::error("Cannot parse the input file, error: {}", ex.what());
 		return 4;
 	}
 
@@ -73,7 +76,7 @@ int main(int argc, char** argv)
 			case NBlock_Type::Config:
 			{
 				if (sConfig.Is_Initialized()) {
-					std::cerr << "Multiple configs found, cannot proceed" << std::endl;
+					spdlog::error("Multiple config blocks found, cannot proceed");
 					return 1;
 				}
 				sConfig.Build(bl);
@@ -82,7 +85,7 @@ int main(int argc, char** argv)
 			case NBlock_Type::Consts:
 			{
 				if (sConsts.Is_Initialized()) {
-					std::cerr << "Multiple constants block found, cannot proceed" << std::endl;
+					spdlog::error("Multiple constants blocks found, cannot proceed");
 					return 1;
 				}
 				sConsts.Build(bl);
@@ -91,7 +94,7 @@ int main(int argc, char** argv)
 			case NBlock_Type::Prototypes:
 			{
 				if (sPrototypes.Is_Initialized()) {
-					std::cerr << "Multiple prototypes block found, cannot proceed" << std::endl;
+					spdlog::error("Multiple prototypes blocks found, cannot proceed");
 					return 1;
 				}
 				sPrototypes.Build(bl);
@@ -104,7 +107,7 @@ int main(int argc, char** argv)
 					scenes.push_back(std::move(sc));
 				}
 				else {
-					std::cerr << "Cannot build one or more scenes, cannot proceed" << std::endl;
+					spdlog::error("Cannot build all scenes, cannot proceed");
 					return 2;
 				}
 				break;
@@ -122,7 +125,7 @@ int main(int argc, char** argv)
 		scenes[scIdx]->Begin();
 		do {
 
-			std::cout << "Scene " << scIdx <<" frame " << scenes[scIdx]->Get_Current_Frame() << std::endl;
+			spdlog::info("Rendering scene {}, frame {}", scIdx, scenes[scIdx]->Get_Current_Frame());
 
 			BLImage img(static_cast<int>(sConfig.Get_Width()), static_cast<int>(sConfig.Get_Height()), BL_FORMAT_PRGB32);
 			BLContext ctx(img);
@@ -142,9 +145,13 @@ int main(int argc, char** argv)
 		frameStart += scenes[scIdx]->Get_Current_Frame();
 	}
 
-	std::string command = ffmpegPath.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + baseOutDir.string() + "\\frame_%06d.png\" -y -c:v copy -pix_fmt yuv420p " + baseOutDir.string() + "\\out.avi";
+	spdlog::info("Stitching frames to a video...");
+
+	std::string command = ffmpegPath.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + baseOutDir.string() + "\\frame_%06d.png\" -y -c:v copy -pix_fmt yuv420p " + baseOutDir.string() + "\\out.avi >NUL 2>&1";
 
 	std::system(command.c_str());
+
+	spdlog::info("Completed");
 
 	return 0;
 }

@@ -4,6 +4,8 @@
 #include <stdexcept>
 #include <iostream>
 
+#include <spdlog/spdlog.h>
+
 CScene::CScene() {
 	//
 }
@@ -18,7 +20,7 @@ std::unique_ptr<CScene> CScene::Build_From(CBlock* block) {
 		auto obj = sFactory.Create(name);
 
 		if (!obj) {
-			std::cerr << "Cannot instantiate an object with name " << name << std::endl;
+			spdlog::error("Cannot instantiate an object with name '{}'", name);
 			return nullptr;
 		}
 
@@ -59,8 +61,10 @@ const std::unique_ptr<CScene_Entity>& CScene::Get_Object_By_Name(const std::stri
 
 	auto itr = mScene_Objects.find(name);
 
-	if (itr == mScene_Objects.end())
+	if (itr == mScene_Objects.end()) {
+		spdlog::error("Cannot find object with name '{}'", name);
 		throw std::invalid_argument{ "No object with name" };
+	}
 
 	return mEntities[itr->second];
 }
@@ -108,4 +112,8 @@ void CScene::Render_Frame(BLContext& context) {
 		}
 	}
 
+}
+
+size_t CScene::Get_Current_Frame() const {
+	return mFrame_Counter;
 }

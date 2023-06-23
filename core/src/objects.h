@@ -44,6 +44,24 @@ enum class NExecution_Result {
 	Suspend,		// suspend the command processing, until this command returns Pass
 };
 
+class CInvalid_Parameter_Type : public std::exception {
+	private:
+		std::string mParam_Name;
+
+	public:
+		CInvalid_Parameter_Type(const std::string& paramName) : mParam_Name(paramName) {
+			//
+		}
+
+		const std::string& Get_Param_Name() const {
+			return mParam_Name;
+		}
+
+		char const* what() const override {
+			return "Requested parameter has a different than requested data type";
+		}
+};
+
 class CTransform {
 	private:
 		double mX = 0, mY = 0;
@@ -219,7 +237,12 @@ class CScene_Entity {
 					target.Set_Resolve_Key(std::get<std::string>(itr->second.value));
 				}
 				else {
-					target = std::get<T>(itr->second.value);
+					try {
+						target = std::get<T>(itr->second.value);
+					}
+					catch (std::bad_variant_access&) {
+						throw CInvalid_Parameter_Type(key);
+					}
 				}
 			}
 		}
