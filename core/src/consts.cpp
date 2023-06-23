@@ -34,3 +34,11 @@ bool CConsts::Build(CBlock* block) {
 
 	return true;
 }
+
+bool CConsts::Is_Initialized() const {
+	return mInitialized;
+}
+
+const TValue_Spec& CConsts::Get_Constant(const std::string& key) const {
+	return mConsts.at(key);
+}

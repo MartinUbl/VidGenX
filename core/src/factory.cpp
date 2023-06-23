@@ -26,3 +26,7 @@ std::unique_ptr<CScene_Entity> CFactory::Create(const std::string& name) {
 
 	return mFactories[namecopy]();
 }
+
+void CFactory::Register_Prototype(const std::string& name, std::unique_ptr<CScene_Entity>&& prototype) {
+	mPrototypes[name] = std::move(prototype);
+}

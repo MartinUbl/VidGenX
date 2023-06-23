@@ -43,3 +43,7 @@ bool CPrototypes::Build(CBlock* block) {
 
 	return true;
 }
+
+bool CPrototypes::Is_Initialized() const {
+	return mInitialized;
+}
