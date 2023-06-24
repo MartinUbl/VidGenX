@@ -1,157 +1,21 @@
-#include <iostream>
-#include <stdexcept>
-#include <fstream>
-#include <list>
-#include <algorithm>
-#include <memory>
-#include <format>
-#include <filesystem>
-#include "parser_entities.h"
-#include "vdlang_lex.h"
-#include "vdlang_parser.h"
+#include <vector>
+#include <string>
 
-#include "config.h"
-#include "consts.h"
-#include "prototypes.h"
-#include "scene.h"
-
-#include <blend2d.h>
-#include <spdlog/spdlog.h>
-
-extern std::vector<CBlock*> _Blocks;
-
-class CAnalyzer_State {
-	public:
-		CAnalyzer_State(const std::string& input) {
-			if (!(m_state = yy_scan_bytes(input.c_str(), static_cast<int>(input.length())))) {
-				throw std::invalid_argument{ "Cannot parse the input string" };
-			}
-		}
-
-		virtual ~CAnalyzer_State() {
-			yy_delete_buffer(m_state);
-		}
-
-		void Parse() {
-			auto result = yyparse();
-
-			if (result != 0) {
-				throw std::runtime_error{ "The input cannot be parsed due to syntax errors" };
-			}
-		}
-
-	private:
-		YY_BUFFER_STATE m_state;
-};
+#include "controller.h"
 
 int main(int argc, char** argv)
 {
-	spdlog::info("Parsing the input file");
+	std::vector<std::string> vargv;
+	for (int i = 0; i < argc; i++)
+		vargv.push_back(argv[i]);
 
-	try {
-		std::ifstream ifs(argv[1]);
+	CController ctrl;
 
-		std::string str((std::istreambuf_iterator<char>(ifs)),
-			std::istreambuf_iterator<char>());
-
-		CAnalyzer_State state(str);
-
-		state.Parse();
-	}
-	catch (std::exception& ex) {
-		spdlog::error("Cannot parse the input file, error: {}", ex.what());
-		return 4;
+	int res = 0;
+	res = ctrl.Initialize(vargv);
+	if (res != 0) {
+		return res;
 	}
 
-	std::vector<std::unique_ptr<CScene>> scenes;
-
-	// sort by type to preserve correct loading order: config, constants, prototypes, scenes
-	std::sort(_Blocks.begin(), _Blocks.end(), [](const CBlock* a, const CBlock* b) {
-		return static_cast<int>(a->Get_Type()) < static_cast<int>(b->Get_Type());
-	});
-
-	for (auto& bl : _Blocks) {
-
-		switch (bl->Get_Type()) {
-			case NBlock_Type::Config:
-			{
-				if (sConfig.Is_Initialized()) {
-					spdlog::error("Multiple config blocks found, cannot proceed");
-					return 1;
-				}
-				sConfig.Build(bl);
-				break;
-			}
-			case NBlock_Type::Consts:
-			{
-				if (sConsts.Is_Initialized()) {
-					spdlog::error("Multiple constants blocks found, cannot proceed");
-					return 1;
-				}
-				sConsts.Build(bl);
-				break;
-			}
-			case NBlock_Type::Prototypes:
-			{
-				if (sPrototypes.Is_Initialized()) {
-					spdlog::error("Multiple prototypes blocks found, cannot proceed");
-					return 1;
-				}
-				sPrototypes.Build(bl);
-				break;
-			}
-			case NBlock_Type::Scene:
-			{
-				auto sc = CScene::Build_From(bl);
-				if (sc) {
-					scenes.push_back(std::move(sc));
-				}
-				else {
-					spdlog::error("Cannot build all scenes, cannot proceed");
-					return 2;
-				}
-				break;
-			}
-		}
-	}
-
-	std::filesystem::path baseOutDir = "C:\\Data\\Dev\\REPO\\VidGenX\\testout\\";
-	std::filesystem::path ffmpegPath = "C:\\Data\\Dev\\REPO\\_dep\\ffmpeg\\bin\\ffmpeg.exe";
-
-	size_t frameStart = 0;
-
-	for (size_t scIdx = 0; scIdx < scenes.size(); scIdx++)
-	{
-		scenes[scIdx]->Begin();
-		do {
-
-			spdlog::info("Rendering scene {}, frame {}", scIdx, scenes[scIdx]->Get_Current_Frame());
-
-			BLImage img(static_cast<int>(sConfig.Get_Width()), static_cast<int>(sConfig.Get_Height()), BL_FORMAT_PRGB32);
-			BLContext ctx(img);
-
-			ctx.setCompOp(BL_COMP_OP_SRC_COPY);
-			ctx.fillAll();
-
-			scenes[scIdx]->Render_Frame(ctx);
-
-			ctx.end();
-
-			std::string filename = std::format("frame_{:06}.png", (frameStart + scenes[scIdx]->Get_Current_Frame()));
-
-			img.writeToFile((baseOutDir / filename).string().c_str());
-		} while (scenes[scIdx]->Next_Frame());
-
-		frameStart += scenes[scIdx]->Get_Current_Frame();
-	}
-
-	spdlog::info("Stitching frames to a video...");
-
-	std::string command = ffmpegPath.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + baseOutDir.string() + "\\frame_%06d.png\" -y -c:v copy -pix_fmt yuv420p " + baseOutDir.string() + "\\out.avi >NUL 2>&1";
-
-	std::system(command.c_str());
-
-	spdlog::info("Completed");
-
-	return 0;
+	return ctrl.Run();
 }

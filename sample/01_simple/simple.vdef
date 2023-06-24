@@ -13,7 +13,7 @@ Constants {
     angry = RGB('#FF0000')
 }
 
-Scene(index = 0, duration = 4s) {
+Scene(duration = 4s) {
     // every object has x, y; all parameters (including the x, y) are passed in params block
 
     v = Rectangle(x = 10, y = 20, width = 100, height = 200, fill = RGB('#669966'))

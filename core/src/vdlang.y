@@ -40,9 +40,9 @@
 
         return std::bit_cast<rgb_t>(argb);
     }
-    // TODO!
 
     std::vector<CBlock*> _Blocks;
+    size_t _Block_Counter = 0;
 }
 
 %union {
@@ -83,9 +83,11 @@ start
 
 top_level_block_chain
     : top_level_block {
+        $1->Set_Block_Index(_Block_Counter++);
         _Blocks.push_back($1);
     }
     | top_level_block top_level_block_chain {
+        $1->Set_Block_Index(_Block_Counter++);
         _Blocks.push_back($1);
     }
 ;

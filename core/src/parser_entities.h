@@ -178,6 +178,7 @@ class CBlock {
 		CParams* mParams = nullptr;
 		NBlock_Type mType;
 		CCommand* mContent = nullptr;
+		size_t mBlock_Index = 0;
 
 	public:
 		CBlock(NBlock_Type type) : mParams{ nullptr }, mType(type), mContent{ nullptr } {
@@ -214,5 +215,13 @@ class CBlock {
 
 		const CCommand* Get_Content() const {
 			return mContent;
+		}
+
+		void Set_Block_Index(size_t idx) {
+			mBlock_Index = idx;
+		}
+
+		size_t Get_Block_Index() const {
+			return mBlock_Index;
 		}
 };
