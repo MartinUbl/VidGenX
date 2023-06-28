@@ -22,6 +22,9 @@ class CController {
 		// vector of scenes to be rendered
 		std::vector<std::unique_ptr<CScene>> mScenes;
 
+		// total number of frames to be stitched
+		size_t mTotal_Frames = 0;
+
 	protected:
 		// parses input files into a internal representation
 		bool Parse_Input_Files();

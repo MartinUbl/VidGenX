@@ -20,6 +20,7 @@
 #include <blend2d.h>
 #include <spdlog/spdlog.h>
 #include <SimpleIni.h>
+#include <libexecstream/exec-stream.h>
 
 // blocks defined by the parser file
 extern std::vector<CBlock*> _Blocks;
@@ -162,7 +163,7 @@ bool CController::Parse_Blocks() {
 }
 
 bool CController::Render_Scenes() {
-	size_t frameStart = 0;
+	mTotal_Frames = 0;
 
 	for (size_t scIdx = 0; scIdx < mScenes.size(); scIdx++)
 	{
@@ -180,12 +181,12 @@ bool CController::Render_Scenes() {
 
 			ctx.end();
 
-			std::string filename = std::format("frame_{:06}.png", (frameStart + mScenes[scIdx]->Get_Current_Frame()));
+			std::string filename = std::format("frame_{:06}.png", (mTotal_Frames + mScenes[scIdx]->Get_Current_Frame()));
 
 			img.writeToFile((mOutput_Directory / filename).string().c_str());
 		} while (mScenes[scIdx]->Next_Frame());
 
-		frameStart += mScenes[scIdx]->Get_Current_Frame();
+		mTotal_Frames += mScenes[scIdx]->Get_Current_Frame();
 	}
 
 	return true;
@@ -194,9 +195,41 @@ bool CController::Render_Scenes() {
 bool CController::Stitch_Video() {
 	spdlog::info("Stitching frames to a video...");
 
-	std::string command = mFFMPEG_Binary.string() + " -framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + mOutput_Directory.string() + "\\frame_%06d.png\" -y -c:v copy -pix_fmt yuv420p " + mOutput_Directory.string() + "\\out.avi >NUL 2>&1";
+	try {
 
-	std::system(command.c_str());
+		const auto ffmpegStdoutFile = mOutput_Directory / "ffmpeg_stdout.log";
+		const auto ffmpegStderrFile = mOutput_Directory / "ffmpeg_stderr.log";
+
+		exec_stream_t stream;
+		// give it a maximum of half a second per frame (e.g., for 120 frames, give it a minute to finish)
+		stream.set_wait_timeout(exec_stream_t::s_all, static_cast<exec_stream_t::timeout_t>(mTotal_Frames * 500));
+
+		stream.start(mFFMPEG_Binary.string(), "-framerate " + std::to_string(sConfig.Get_FPS()) + " -pattern_type sequence -i \"" + mOutput_Directory.string() + "\\frame_%06d.png\" -y -c:v copy -pix_fmt yuv420p " + mOutput_Directory.string() + "\\out.avi");
+		stream.close_in(); // we don't need stdin (for now, maybe later for streamlining the video generation directly from frames)
+
+		std::ostringstream oss_out, oss_err;
+
+		char buffer[4096];
+		while (stream.out().read(buffer, sizeof(buffer)))
+			oss_out << std::string_view{ buffer, sizeof(buffer) };
+		oss_out << std::string_view{ buffer, static_cast<size_t>(stream.out().gcount()) };
+
+		while (stream.err().read(buffer, sizeof(buffer)))
+			oss_err << std::string_view{ buffer, sizeof(buffer) };
+		oss_err << std::string_view{ buffer, static_cast<size_t>(stream.err().gcount()) };
+
+		// write out stdout/stderr to log file
+
+		std::ofstream out_file(ffmpegStdoutFile.string());
+		out_file << oss_out.str();
+
+		std::ofstream err_file(ffmpegStderrFile.string());
+		err_file << oss_err.str();
+	}
+	catch (std::exception& ex) {
+		spdlog::error("An exception occurred when generating a video: {}", ex.what());
+		spdlog::error("Failed to generate a video; please, see the ffmpeg_stdout.log and ffmpeg_stderr.log files in output directory for details");
+	}
 
 	return true;
 }

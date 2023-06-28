@@ -12,6 +12,10 @@ SET(BLEND2D_DIR "${APP_DIR}/../third_party/blend2d")
 SET(BLEND2D_STATIC TRUE)
 INCLUDE("${BLEND2D_DIR}/CMakeLists.txt")
 
+SET(LIBEXECSTREAM_DIR "${APP_DIR}/../third_party/libexecstream/")
+INCLUDE("${LIBEXECSTREAM_DIR}/src/CMakeLists.txt")
+SET(LIBEXECSTREAM_SHARED FALSE)
+
 SET(SRC_DIR src)
 SET(LEXER_OUT "${PARSER_DIR}/lexer.cpp")
 SET(PARSER_OUT "${PARSER_DIR}/parser.cpp")
@@ -25,8 +29,9 @@ FILE(GLOB_RECURSE src src/*.cpp src/*.hpp src/*.h src/*.c src/*.l src/*.y)
 INCLUDE_DIRECTORIES(src)
 INCLUDE_DIRECTORIES("${APP_DIR}/../third_party/spdlog/include/")
 INCLUDE_DIRECTORIES("${APP_DIR}/../third_party/simpleini/")
+INCLUDE_DIRECTORIES("${APP_DIR}/../third_party/libexecstream/include/")
 
 ADD_EXECUTABLE(VidGenX ${src} "${SRC_DIR}/vdlang.y" "${LEXER_OUT}" "${PARSER_OUT}")
 
-TARGET_LINK_LIBRARIES(VidGenX ${SDL2_LIBRARIES} Blend2D::Blend2D)
+TARGET_LINK_LIBRARIES(VidGenX ${SDL2_LIBRARIES} Blend2D::Blend2D libexecstream)
 TARGET_INCLUDE_DIRECTORIES(VidGenX PRIVATE "${PARSER_DIR}")

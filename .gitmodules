@@ -10,3 +10,6 @@
 [submodule "third_party/simpleini"]
 	path = third_party/simpleini
 	url = https://github.com/brofield/simpleini
+[submodule "third_party/libexecstream"]
+	path = third_party/libexecstream
+	url = https://github.com/MartinUbl/libexecstream
