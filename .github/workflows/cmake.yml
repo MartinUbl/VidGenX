@@ -21,7 +21,7 @@ jobs:
       run: sudo apt-get install -y flex bison
     
     - name: Update submodules
-      run: git submodule update
+      run: git submodule update --init --recursive
 
     - name: Configure CMake
       run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
